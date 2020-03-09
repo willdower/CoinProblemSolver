@@ -2,6 +2,7 @@
 #include <vector>
 #include <algorithm>
 #include <stack>
+#include <chrono>
 
 int* findPrimes(int max) {
     //0 means prime
@@ -77,9 +78,17 @@ int main() {
     std::cin >> minIters;
     std::cin >> maxIters;
 
+    auto startExecution = std::chrono::system_clock::now();
+
     int *primeArr = findPrimes(amount);
 
     std::cout << findWays(0, 0, amount, amount, primeArr, minIters, maxIters);
+
+    auto endExecution = std::chrono::system_clock::now();
+
+    std::chrono::duration<double> timeTaken = endExecution - startExecution;
+
+    std::cout << std::endl << timeTaken.count();
 
     delete [] primeArr;
 
