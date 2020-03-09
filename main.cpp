@@ -54,6 +54,15 @@ int findWays(int iters, int soFar, int max, int goalAmount, int *primeArr, int m
         if (primeArr[i] == 1) {
             continue;
         }
+
+        if ((goalAmount-soFar)-i < (minIters-iters)-1) {
+            continue;
+        }
+
+        if (i*(maxIters-iters) < (goalAmount-soFar)) {
+            continue;
+        }
+
         totalWays += findWays(iters+1, soFar, i, goalAmount, primeArr, minIters, maxIters);
     }
 
