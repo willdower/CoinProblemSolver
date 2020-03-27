@@ -1,8 +1,8 @@
 #include <iostream>
 #include <vector>
-#include <algorithm>
-#include <stack>
+#include <fstream>
 #include <chrono>
+#include <sstream>
 
 class node {
 public:
@@ -53,170 +53,6 @@ int* findPrimes(int max) {
     return primeArr;
 }
 
-int newFindWays(int n, const int *primeArr, const int min, const int max) {
-    int ***waysArray = new int** [n+1];
-    waysArray[0] = nullptr; //No use for 0
-
-    for (int i=1;i<=n;i++) {
-        for (int j = i; j > 0; j--) { //Grab largest prime below amountLeft
-            //if (primeArr[j] == 0) {
-                waysArray[i] = new int* [j+1];
-                for (int k=1;k<=j;k++) {
-                    waysArray[i][k] = new int [i]{0};
-                }
-                break;
-            //}
-        }
-    }
-
-    std::stack<node*> stack;
-
-    for (int i=1;i<=n;i++) { //Main ways for each n loop
-
-        stack.push(new node(i, n));
-
-        while (!stack.empty()) {
-            node *currentNode = stack.top();
-            stack.pop();
-
-            for (int j=1;j<=currentNode->branchPrime;j++) { //Loop for n in prime j and under -- j is branchPrime
-                //Instead of referencing j for index, use posToSet, in case gone further down chain
-
-                if (primeArr[j] != 0) {
-                    continue;
-                }
-
-                if (currentNode->posToSet == -1) {
-                    currentNode->posToSet = j;
-                }
-                /**else if (!currentNode->posLocked) {
-                    currentNode->posToSet = j;
-                    currentNode->posLocked = true;
-                }**/
-
-                if (j == 1 && !currentNode->posLocked) { //Making n in 1 and under - always 1
-                    waysArray[i][i][i] = 1;
-                    if (!currentNode->posLocked) {
-                        currentNode->posToSet = -1;
-                        currentNode->posLocked = false;
-                    }
-                    continue;
-                }
-                else if (j == i && !currentNode->posLocked) { //Making n in in prime n and under - always 1
-                    waysArray[i][i][1] = 1;
-                    if (!currentNode->posLocked) {
-                        currentNode->posToSet = -1;
-                        currentNode->posLocked = false;
-                    }
-                    continue;
-                }
-
-                if (currentNode->amountLeft-j > j) { //Originally just > then added right half of or
-                    node *newNode = new node(currentNode, j);
-                    newNode->posLocked = true;
-                    stack.push(newNode);
-                    continue;
-                }
-                else {
-                    for (int k=1;k<=j;k++) {
-                        if (currentNode->posToSet > currentNode->amountLeft - j) {
-                            waysArray[i][currentNode->posToSet][k + currentNode->degreesOfRemoval + 1] =
-                                    waysArray[currentNode->amountLeft - j][currentNode->amountLeft - j][k];
-                        }
-                        else {
-                            waysArray[i][currentNode->posToSet][k + currentNode->degreesOfRemoval + 1] =
-                                    waysArray[currentNode->amountLeft - j][currentNode->posToSet][k];
-                        }
-                    }
-                }
-
-                currentNode->posToSet = -1;
-                currentNode->posLocked = false;
-            }
-
-        }
-    }
-
-    int ways = 0;
-    /**int largestPrimeBelowN = 0, ways = 0;
-    for (int i=n;i>0; i--) { //Grab largest prime below n
-        if (primeArr[i] == 0) {
-            largestPrimeBelowN = i;
-            break;
-        }
-    }**/
-
-    for (int i=1;i<=n;i++) {
-        /**if (primeArr[i] != 0) {
-            continue;
-        }**/
-        for (int j=min;j<=max;j++) {
-            ways += waysArray[n][i][j];
-        }
-    }
-
-    return ways;
-
-}
-
-int ripFindWays(int n, const int *primeArr) {
-    int ways = 0;
-    std::stack<node*> stack;
-    int **waysArray = new int*[n];
-    for (int i=0;i<n;i++) {
-        waysArray[i] = nullptr;
-    }
-
-    for (int i=1;i<n;i++) {
-        if (primeArr[i] == 1) {
-            continue;
-        }
-
-        stack.push(new node(i, n));
-
-        while (!stack.empty()) {
-            node *currentNode = stack.top();
-            stack.pop();
-            for (int j=1;j<currentNode->branchPrime;j++) {
-                if (primeArr[j] == 1) { //If j isn't prime, skip (only use prime j values)
-                    continue;
-                }
-                if (currentNode->branchPrime > currentNode->amountLeft) {
-                    for (int k=currentNode->amountLeft;k>0;k--) { //Grab largest prime below amountLeft
-                        if (primeArr[k] == 0) {
-                            currentNode->branchPrime = k;
-                            break;
-                        }
-                    }
-                }
-
-                if (currentNode->amountLeft > currentNode->branchPrime) {
-                    stack.push(new node(currentNode, j));
-                    continue;
-                }
-
-                if (waysArray[currentNode->amountLeft] != nullptr) {
-                    for (int k=0;k<=currentNode->branchPrime;k++) {
-                        if (k <= 2) {
-                            ways += 1;
-                        }
-                        else {
-                            ways += waysArray[currentNode->amountLeft][k-2];
-                        }
-                    }
-                }
-                else {
-
-                }
-
-            }
-            delete currentNode;
-        }
-
-    }
-
-}
-
 int findWays(int iters, int soFar, int max, int goalAmount, int *primeArr, int minIters, int maxIters) {
 
     //If more than the max number of iterations, return
@@ -230,18 +66,18 @@ int findWays(int iters, int soFar, int max, int goalAmount, int *primeArr, int m
     }
 
     if (soFar == goalAmount) {
-        //If not enough iterations, this is not a way
-        if (iters < minIters) {
+        //If not enough or too many iterations, this is not a way -- BASE CASE
+        if (iters < minIters || iters > maxIters) {
             return 0;
         }
-        //If it is enough iterations, and not more than max as tested above, its a valid way
+        //If it is enough iterations, and not more than max as tested above, its a valid way -- BASE CASE
         else {
             return 1;
         }
 
     }
     else if (soFar > goalAmount) {
-        //If adding another of this prime makes it go over, it is not a way
+        //If adding another of this prime makes it go over, it is not a way -- BASE CASE
         return 0;
     }
 
@@ -263,35 +99,83 @@ int findWays(int iters, int soFar, int max, int goalAmount, int *primeArr, int m
             continue;
         }
 
+        //Do a further level of recursion
         totalWays += findWays(iters+1, soFar, i, goalAmount, primeArr, minIters, maxIters);
+    }
+
+    if (iters == 0 && minIters == 1 && primeArr[max] != 0) {
+        totalWays += 1; //While primes will pick up themselves as the golden coin, non-primes will not, so added here
     }
 
     return totalWays;
 }
 
-int main() {
+int main(int argc, char **argv) {
 
-    int amount, minIters, maxIters;
+    std::ifstream input;
 
-    std::cin >> amount;
-    std::cin >> minIters;
-    std::cin >> maxIters;
+    if (argc == 1) { //Check if filename was entered
+        std::cout << "Filename required." << std::endl;
+        return 0;
+    }
+    else {
+        try {
+            input.open(argv[1]);
+        }
+        catch (std::ifstream::failure & e){
+            std::cout << "Failed to find or open input file." << std::endl;
+            return 1;
+        }
+    }
 
-    auto startExecution = std::chrono::system_clock::now();
+    std::ofstream output;
 
-    int *primeArr = findPrimes(amount);
+    try {
+        output.open("output.txt");
+    }
+    catch (std::ifstream::failure & e){
+        std::cout << "Failed to create or open output file." << std::endl;
+        return 1;
+    }
 
-    //std::cout << findWays(0, 0, amount, amount, primeArr, minIters, maxIters);
-    int ways = newFindWays(amount, primeArr, minIters, maxIters);
-    std::cout << ways << std::endl;
+    std::string line;
 
-    auto endExecution = std::chrono::system_clock::now();
+    while (std::getline(input, line)) { //Read problem line by line
+        int amount, minIters = -1, maxIters = -1;
 
-    std::chrono::duration<double> timeTaken = endExecution - startExecution;
+        std::stringstream lineSS(line);
 
-    std::cout << std::endl << timeTaken.count();
+        //Grab details from line
+        lineSS >> amount;
+        if (!lineSS.eof()) {
+            lineSS >> minIters;
+        }
+        if (!lineSS.eof()) {
+            lineSS >> maxIters;
+        }
 
-    delete [] primeArr;
+        if (minIters == -1) {
+            minIters = 1;
+            maxIters = amount;
+        }
+        else if (maxIters == -1) {
+            maxIters = minIters;
+        }
+
+        auto startExecution = std::chrono::system_clock::now(); //Start time
+
+        int *primeArr = findPrimes(amount); //Generate primes again every time to include it in running time for each one
+
+        output << findWays(0, 0, amount, amount, primeArr, minIters, maxIters) << std::endl;
+
+        auto endExecution = std::chrono::system_clock::now(); //End time
+
+        std::chrono::duration<double> timeTaken = endExecution - startExecution;
+
+        std::cout << std::endl << amount << " " << minIters << " " << maxIters << " - Time: " << timeTaken.count();
+
+        delete [] primeArr;
+    }
 
     return 0;
 }
